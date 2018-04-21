@@ -449,8 +449,7 @@ void HelloTriangleApplication::updateUniformBuffer()
 	auto currentTime = std::chrono::high_resolution_clock::now();
 	float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
 	UniformBufferObject ubo = {};
-	// ubo.m_model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-	ubo.m_model = glm::rotate(glm::mat4(1.0f), glm::radians(180.f), glm::vec3(0.0f, 0.0f, 1.0f));
+	ubo.m_model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
 	ubo.m_view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
 	ubo.m_proj = glm::perspective(glm::radians(45.0f), m_vkSwapchainExtent.width / (float)m_vkSwapchainExtent.height, 0.1f, 10.0f);
 	ubo.m_proj[1][1] *= -1;
@@ -1132,7 +1131,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL HelloTriangleApplication::debugCallback(
 
 /**************************************************************
 * Description
-*		Creates the texture image view.
+*		Creates the texture image view for the texture image.
 * Returns
 *		void
 * Notes
@@ -1238,6 +1237,9 @@ void HelloTriangleApplication::createDepthResources()
 		m_vkDepthImage,
 		m_vkDepthImageMemory);
 	m_vkDepthImageView = createImageView(m_vkDepthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT, 1 /*mipLevels*/);
+
+	// Transition the depth image to right layout.
+	//
 	transitionImageLayout(
 		m_vkDepthImage,
 		depthFormat,
