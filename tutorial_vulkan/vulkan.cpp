@@ -2,10 +2,6 @@
 #include <set>
 #include <algorithm>
 #include <fstream>
-#define GLM_FORCE_RADIANS
-#define GLM_FORCE_DEPTH_ZERO_TO_ONE
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include<stb_image.h>
@@ -14,8 +10,6 @@
 #include<tiny_obj_loader.h>
 
 #include <unordered_map>
-
-#include <chrono>
 
 /**************************************************************
 * Description
@@ -445,11 +439,9 @@ void HelloTriangleApplication::createDescriptorSetLayout()
 **************************************************************/
 void HelloTriangleApplication::updateUniformBuffer()
 {
-	static auto startTime = std::chrono::high_resolution_clock::now();
-	auto currentTime = std::chrono::high_resolution_clock::now();
-	float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
 	UniformBufferObject ubo = {};
-	ubo.m_model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+
+	ubo.m_model = m_rotation.rotationMatrix();
 	ubo.m_view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
 	ubo.m_proj = glm::perspective(glm::radians(45.0f), m_vkSwapchainExtent.width / (float)m_vkSwapchainExtent.height, 0.1f, 10.0f);
 	ubo.m_proj[1][1] *= -1;
@@ -1091,6 +1083,7 @@ void HelloTriangleApplication::initWindow()
 	glfwSetWindowUserPointer(m_glfwWindow, this);
 
 	glfwSetWindowSizeCallback(m_glfwWindow, HelloTriangleApplication::onWindowResize);
+	glfwSetKeyCallback(m_glfwWindow, HelloTriangleApplication::onKeyPress);
 }
 
 /**************************************************************
@@ -1105,6 +1098,88 @@ void HelloTriangleApplication::onWindowResize(GLFWwindow * window, int width, in
 {
 	HelloTriangleApplication *thisApp = reinterpret_cast<HelloTriangleApplication*>(glfwGetWindowUserPointer(window));
 	thisApp->recreateSwapchain();
+}
+
+/**************************************************************
+* Description
+*		The callback function for keyboard events.
+* Returns
+*		void
+* Notes
+*
+**************************************************************/
+void HelloTriangleApplication::onKeyPress(
+	GLFWwindow *window,
+	int key,
+	int scanCode,
+	int action,
+	int mods)
+{
+	HelloTriangleApplication *app = reinterpret_cast<HelloTriangleApplication*>(glfwGetWindowUserPointer(window));
+	switch (key)
+	{
+	case GLFW_KEY_ESCAPE:
+		glfwSetWindowShouldClose(window, true);
+		break;
+	case GLFW_KEY_UP:
+	case GLFW_KEY_DOWN:
+		if (GLFW_PRESS == action || GLFW_REPEAT == action)
+		{
+			app->m_rotation.setXKeyPressed(true);
+			if (GLFW_KEY_UP == key)
+			{
+				app->m_rotation.fXDirectionPositive(true);
+			}
+			else
+			{
+				app->m_rotation.fXDirectionPositive(false);
+			}
+		}
+		else
+		{
+			app->m_rotation.setXKeyPressed(false);
+		}
+
+		break;
+	case GLFW_KEY_RIGHT:
+	case GLFW_KEY_LEFT:
+		if (GLFW_PRESS == action || GLFW_REPEAT == action)
+		{
+			app->m_rotation.setYKeyPressed(true);
+			if (GLFW_KEY_LEFT == key)
+			{
+				app->m_rotation.fYDirectionPositive(true);
+			}
+			else
+			{
+				app->m_rotation.fYDirectionPositive(false);
+			}
+		}
+		else
+		{
+			app->m_rotation.setYKeyPressed(false);
+		}
+		break;
+	case GLFW_KEY_M:
+	case GLFW_KEY_N:
+		if (GLFW_PRESS == action || GLFW_REPEAT == action)
+		{
+			app->m_rotation.setZKeyPressed(true);
+			if (GLFW_KEY_N == key)
+			{
+				app->m_rotation.fZDirectionPositive(true);
+			}
+			else
+			{
+				app->m_rotation.fZDirectionPositive(false);
+			}
+		}
+		else
+		{
+			app->m_rotation.setZKeyPressed(false);
+		}
+		break;
+	}
 }
 
 /**************************************************************

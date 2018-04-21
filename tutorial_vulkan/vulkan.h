@@ -2,7 +2,6 @@
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
-#include <glm/glm.hpp>
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/hash.hpp>
@@ -14,7 +13,7 @@
 #include <vector>
 #include <cstring>
 #include <array>
-
+#include "rotation.h"
 
 const int WIDTH = 800;
 const int HEIGHT = 600;
@@ -142,7 +141,8 @@ private:
 	void cleanup();
 	void cleanupSwapchain();
 	void initWindow();
-	static void onWindowResize(GLFWwindow* window, int width, int height);
+	static void onWindowResize(GLFWwindow *window, int width, int height);
+	static void onKeyPress(GLFWwindow *window, int key, int scanCode, int action, int mods);
 	void setupDebugCallback();
 	void pickPhysicalDevice();
 	void createLogicalDevice();
@@ -228,7 +228,7 @@ private:
 		int32_t texHeight,
 		uint32_t mipLevels
 	);
-	
+
 	GLFWwindow *m_glfwWindow;
 	VkInstance m_vkInstance;
 	VkDevice m_vkDevice;
@@ -271,5 +271,6 @@ private:
 	std::vector<Vertex> m_vertices;
 	std::vector<uint32_t> m_indices;
 	uint32_t m_mipLevels;
+	Rotation m_rotation;
 };
 
