@@ -13,7 +13,8 @@
 #include <vector>
 #include <cstring>
 #include <array>
-#include "rotation.h"
+#include "camera.h"
+#include "model.h"
 
 const int WIDTH = 800;
 const int HEIGHT = 600;
@@ -143,6 +144,8 @@ private:
 	void initWindow();
 	static void onWindowResize(GLFWwindow *window, int width, int height);
 	static void onKeyPress(GLFWwindow *window, int key, int scanCode, int action, int mods);
+	static void onMouseClick(GLFWwindow *window, int button, int action, int mods);
+	static void onCursorMove(GLFWwindow *window, double xpos, double ypos);
 	void setupDebugCallback();
 	void pickPhysicalDevice();
 	void createLogicalDevice();
@@ -271,6 +274,7 @@ private:
 	std::vector<Vertex> m_vertices;
 	std::vector<uint32_t> m_indices;
 	uint32_t m_mipLevels;
-	Rotation m_rotation;
+	Camera m_camera;
+	Model m_model;
 };
 

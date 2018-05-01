@@ -1,14 +1,40 @@
-#include "rotation.h"
+#include "model.h"
+
 
 /**************************************************************
 * Description
-*		updates the rotation around x axis.
+*		Constructor for the class.
 * Returns
 *		void
 * Notes
 *
 **************************************************************/
-void Rotation::rotateX()
+Model::Model()
+{
+}
+
+/**************************************************************
+* Description
+*		Descriptor for the class.
+* Returns
+*		void
+* Notes
+*
+**************************************************************/
+Model::~Model()
+{
+}
+
+/**************************************************************
+* Description
+*		updates the rotation around x axis based on the time
+*		since last key stroke.
+* Returns
+*		void
+* Notes
+*
+**************************************************************/
+void Model::rotateX()
 {
 	if (m_fKeyPressed[0])
 	{
@@ -25,13 +51,14 @@ void Rotation::rotateX()
 
 /**************************************************************
 * Description
-*		updates the rotation around y axis.
+*		updates the rotation around y axis based on time since
+*		last key stroke.
 * Returns
 *		void
 * Notes
 *
 **************************************************************/
-void Rotation::rotateY()
+void Model::rotateY()
 {
 	if (m_fKeyPressed[1])
 	{
@@ -48,13 +75,14 @@ void Rotation::rotateY()
 
 /**************************************************************
 * Description
-*		updates the rotation around z axis.
+*		updates the rotation around z axis based on time elapsed
+*		since last key stroke.
 * Returns
 *		void
 * Notes
 *
 **************************************************************/
-void Rotation::rotateZ()
+void Model::rotateZ()
 {
 	if (m_fKeyPressed[2])
 	{
@@ -77,11 +105,12 @@ void Rotation::rotateZ()
 * Notes
 *
 **************************************************************/
-glm::mat4 Rotation::rotationMatrix()
+glm::mat4 Model::getModelMatrix()
 {
 	rotateX();
 	rotateY();
 	rotateZ();
+
 	return
 		glm::rotate(glm::mat4(1.0f), m_durations.m_xDuration * glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f))*
 		glm::rotate(glm::mat4(1.0f), m_durations.m_yDuration * glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f))*
@@ -96,7 +125,7 @@ glm::mat4 Rotation::rotationMatrix()
 * Notes
 *
 **************************************************************/
-float Rotation::getDuration(StdTime &lastTime)
+float Model::getDuration(StdTime &lastTime)
 {
 	auto currentTime = std::chrono::high_resolution_clock::now();
 	float duration = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - lastTime).count();
@@ -112,7 +141,7 @@ float Rotation::getDuration(StdTime &lastTime)
 * Notes
 *
 **************************************************************/
-void Rotation::setXKeyPressed(bool fKeyPressed)
+void Model::setXKeyPressed(bool fKeyPressed)
 {
 	m_fKeyPressed[0] = fKeyPressed;
 	m_lastUpdateTime[0] = std::chrono::high_resolution_clock::now();
@@ -126,7 +155,7 @@ void Rotation::setXKeyPressed(bool fKeyPressed)
 * Notes
 *
 **************************************************************/
-void Rotation::setYKeyPressed(bool fKeyPressed)
+void Model::setYKeyPressed(bool fKeyPressed)
 {
 	m_fKeyPressed[1] = fKeyPressed;
 	m_lastUpdateTime[1] = std::chrono::high_resolution_clock::now();
@@ -140,7 +169,7 @@ void Rotation::setYKeyPressed(bool fKeyPressed)
 * Notes
 *
 **************************************************************/
-void Rotation::setZKeyPressed(bool fKeyPressed)
+void Model::setZKeyPressed(bool fKeyPressed)
 {
 	m_fKeyPressed[2] = fKeyPressed;
 	m_lastUpdateTime[2] = std::chrono::high_resolution_clock::now();
@@ -154,7 +183,7 @@ void Rotation::setZKeyPressed(bool fKeyPressed)
 * Notes
 *
 **************************************************************/
-void Rotation::fXDirectionPositive(bool fPositive)
+void Model::fXDirectionPositive(bool fPositive)
 {
 	m_fDirectionPositive[0] = fPositive;
 }
@@ -167,7 +196,7 @@ void Rotation::fXDirectionPositive(bool fPositive)
 * Notes
 *
 **************************************************************/
-void Rotation::fYDirectionPositive(bool fPositive)
+void Model::fYDirectionPositive(bool fPositive)
 {
 	m_fDirectionPositive[1] = fPositive;
 }
@@ -180,7 +209,7 @@ void Rotation::fYDirectionPositive(bool fPositive)
 * Notes
 *
 **************************************************************/
-void Rotation::fZDirectionPositive(bool fPositive)
+void Model::fZDirectionPositive(bool fPositive)
 {
 	m_fDirectionPositive[2] = fPositive;
 }

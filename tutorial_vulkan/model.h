@@ -1,5 +1,4 @@
 #pragma once
-
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>
@@ -20,14 +19,18 @@ struct DurationForRotation
 	float m_zDuration;
 };
 
-class Rotation
+// Keeps track of the state of a model.
+//
+class Model
 {
 public:
+	Model();
+	~Model();
 	void rotateX();
 	void rotateY();
 	void rotateZ();
 	float getDuration(StdTime &lastTime);
-	glm::mat4 rotationMatrix();
+	glm::mat4 getModelMatrix();
 	void setXKeyPressed(bool fKeyPressed);
 	void fXDirectionPositive(bool fPositive);
 	void setYKeyPressed(bool fKeyPressed);
@@ -40,3 +43,4 @@ private:
 	bool m_fKeyPressed[3];
 	bool m_fDirectionPositive[3];
 };
+

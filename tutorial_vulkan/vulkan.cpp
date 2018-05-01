@@ -441,8 +441,15 @@ void HelloTriangleApplication::updateUniformBuffer()
 {
 	UniformBufferObject ubo = {};
 
-	ubo.m_model = m_rotation.rotationMatrix();
-	ubo.m_view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+	ubo.m_model = m_model.getModelMatrix();
+	ubo.m_view = m_camera.getViewMatrix();
+	if (m_camera.fMouseButtonPressed())
+	{
+		double xPos, yPos;
+		glfwGetCursorPos(m_glfwWindow, &xPos, &yPos);
+		m_camera.setCurrentMousePosition(xPos, yPos);
+	}
+	// ubo.m_view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
 	ubo.m_proj = glm::perspective(glm::radians(45.0f), m_vkSwapchainExtent.width / (float)m_vkSwapchainExtent.height, 0.1f, 10.0f);
 	ubo.m_proj[1][1] *= -1;
 	void *data = nullptr;
@@ -1084,6 +1091,7 @@ void HelloTriangleApplication::initWindow()
 
 	glfwSetWindowSizeCallback(m_glfwWindow, HelloTriangleApplication::onWindowResize);
 	glfwSetKeyCallback(m_glfwWindow, HelloTriangleApplication::onKeyPress);
+	glfwSetMouseButtonCallback(m_glfwWindow, HelloTriangleApplication::onMouseClick);
 }
 
 /**************************************************************
@@ -1125,19 +1133,19 @@ void HelloTriangleApplication::onKeyPress(
 	case GLFW_KEY_DOWN:
 		if (GLFW_PRESS == action || GLFW_REPEAT == action)
 		{
-			app->m_rotation.setXKeyPressed(true);
+			app->m_model.setXKeyPressed(true);
 			if (GLFW_KEY_UP == key)
 			{
-				app->m_rotation.fXDirectionPositive(true);
+				app->m_model.fXDirectionPositive(false);
 			}
 			else
 			{
-				app->m_rotation.fXDirectionPositive(false);
+				app->m_model.fXDirectionPositive(true);
 			}
 		}
 		else
 		{
-			app->m_rotation.setXKeyPressed(false);
+			app->m_model.setXKeyPressed(false);
 		}
 
 		break;
@@ -1145,40 +1153,84 @@ void HelloTriangleApplication::onKeyPress(
 	case GLFW_KEY_LEFT:
 		if (GLFW_PRESS == action || GLFW_REPEAT == action)
 		{
-			app->m_rotation.setYKeyPressed(true);
+			app->m_model.setYKeyPressed(true);
 			if (GLFW_KEY_LEFT == key)
 			{
-				app->m_rotation.fYDirectionPositive(true);
+				app->m_model.fYDirectionPositive(false);
 			}
 			else
 			{
-				app->m_rotation.fYDirectionPositive(false);
+				app->m_model.fYDirectionPositive(true);
 			}
 		}
 		else
 		{
-			app->m_rotation.setYKeyPressed(false);
+			app->m_model.setYKeyPressed(false);
 		}
 		break;
 	case GLFW_KEY_M:
 	case GLFW_KEY_N:
 		if (GLFW_PRESS == action || GLFW_REPEAT == action)
 		{
-			app->m_rotation.setZKeyPressed(true);
+			app->m_model.setZKeyPressed(true);
 			if (GLFW_KEY_N == key)
 			{
-				app->m_rotation.fZDirectionPositive(true);
+				app->m_model.fZDirectionPositive(true);
 			}
 			else
 			{
-				app->m_rotation.fZDirectionPositive(false);
+				app->m_model.fZDirectionPositive(false);
 			}
 		}
 		else
 		{
-			app->m_rotation.setZKeyPressed(false);
+			app->m_model.setZKeyPressed(false);
 		}
 		break;
+	}
+}
+
+/**************************************************************
+* Description
+*		The glfw callback function for mouse button clicks.
+* Returns
+*		void
+* Notes
+*
+**************************************************************/
+void HelloTriangleApplication::onMouseClick(GLFWwindow * window, int button, int action, int mods)
+{
+	HelloTriangleApplication *app = reinterpret_cast<HelloTriangleApplication*>(glfwGetWindowUserPointer(window));
+	if (GLFW_MOUSE_BUTTON_LEFT == button)
+	{
+		if (GLFW_PRESS == action)
+		{
+			app->m_camera.setMouseButtonPressed(true);
+			double xPos, yPos;
+			glfwGetCursorPos(window, &xPos, &yPos);
+			app->m_camera.setInitialMousePosition(xPos, yPos);
+		}
+		else
+		{
+			app->m_camera.setMouseButtonPressed(false);
+		}
+	}
+}
+
+/**************************************************************
+* Description
+*		The glfw callback function for when the cursor is on the screen.
+* Returns
+*		void
+* Notes
+*
+**************************************************************/
+void HelloTriangleApplication::onCursorMove(GLFWwindow * window, double xpos, double ypos)
+{
+	HelloTriangleApplication *app = reinterpret_cast<HelloTriangleApplication*>(glfwGetWindowUserPointer(window));
+	if (app->m_camera.fMouseButtonPressed())
+	{
+		app->m_camera.setCurrentMousePosition(xpos, ypos);
 	}
 }
 
@@ -1412,9 +1464,14 @@ void HelloTriangleApplication::loadModel()
 				attrib.vertices[3 * index.vertex_index + 0],
 				attrib.vertices[3 * index.vertex_index + 1],
 				attrib.vertices[3 * index.vertex_index + 2] };
-			vertex.m_texCoord = {
-				attrib.texcoords[2 * index.texcoord_index + 0],
-				1.0f - attrib.texcoords[2 * index.texcoord_index + 1] };
+
+			if (index.texcoord_index != -1)
+			{
+				vertex.m_texCoord = {
+					attrib.texcoords[2 * index.texcoord_index + 0],
+					1.0f - attrib.texcoords[2 * index.texcoord_index + 1] };
+			}
+
 			vertex.m_color = { 1.0f, 1.0f, 1.0f };
 			if (0 == uniqueVertices.count(vertex))
 			{

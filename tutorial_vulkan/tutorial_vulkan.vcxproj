@@ -20,11 +20,13 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="rotation.cpp" />
+    <ClCompile Include="camera.cpp" />
+    <ClCompile Include="model.cpp" />
     <ClCompile Include="vulkan.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="rotation.h" />
+    <ClInclude Include="camera.h" />
+    <ClInclude Include="model.h" />
     <ClInclude Include="vulkan.h" />
   </ItemGroup>
   <ItemGroup>
