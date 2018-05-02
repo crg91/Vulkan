@@ -1,4 +1,8 @@
 #include "model.h"
+#define TINYOBJLOADER_IMPLEMENTATION
+#include<tiny_obj_loader.h>
+
+#include <unordered_map>
 
 
 /**************************************************************
@@ -10,6 +14,8 @@
 *
 **************************************************************/
 Model::Model()
+:m_vkVertexBuffer(VK_NULL_HANDLE),
+m_vkVertexBufferMemory(VK_NULL_HANDLE)
 {
 }
 
@@ -212,4 +218,156 @@ void Model::fYDirectionPositive(bool fPositive)
 void Model::fZDirectionPositive(bool fPositive)
 {
 	m_fDirectionPositive[2] = fPositive;
+}
+
+/**************************************************************
+* Description
+*		Loads the model from obj file.
+* Returns
+*		void
+* Notes
+*
+**************************************************************/
+void Model::loadModel()
+{
+	tinyobj::attrib_t attrib;
+	std::vector<tinyobj::shape_t> shapes;
+	std::vector<tinyobj::material_t> materials;
+	std::string err;
+
+	if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &err, MODEL_PATH.c_str()))
+	{
+		throw std::runtime_error(err);
+	}
+
+	std::unordered_map<Vertex, uint32_t> uniqueVertices = {};
+	for (const auto& shape : shapes)
+	{
+		for (const auto& index : shape.mesh.indices)
+		{
+			Vertex vertex = {};
+			vertex.m_position = {
+				attrib.vertices[3 * index.vertex_index + 0],
+				attrib.vertices[3 * index.vertex_index + 1],
+				attrib.vertices[3 * index.vertex_index + 2] };
+
+			if (index.texcoord_index != -1)
+			{
+				vertex.m_texCoord = {
+					attrib.texcoords[2 * index.texcoord_index + 0],
+					1.0f - attrib.texcoords[2 * index.texcoord_index + 1] };
+			}
+
+			vertex.m_color = { 1.0f, 1.0f, 1.0f };
+			if (0 == uniqueVertices.count(vertex))
+			{
+				uniqueVertices[vertex] = static_cast<uint32_t>(m_vertices.size());
+				m_vertices.push_back(vertex);
+			}
+			m_indices.push_back(uniqueVertices[vertex]);
+		}
+	}
+}
+
+/**************************************************************
+* Description
+*		Creates vertex buffer and memory and copies data to it.
+* Returns
+*		void
+* Notes
+*
+**************************************************************/
+void Model::createVertexBuffer(
+	VkDevice vkDevice,
+	VkPhysicalDevice vkPhysicalDevice,
+	VkCommandPool vkCommandPool,
+	VkQueue vkQueue)
+{
+	uint32_t size = sizeof(m_vertices[0]) * m_vertices.size();
+	VkBuffer stagingBuffer;
+	VkDeviceMemory stagingMemory;
+	createBuffer(vkDevice,
+		vkPhysicalDevice,
+		size,
+		VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+		stagingBuffer,
+		stagingMemory);
+
+	void *pData = nullptr;
+	vkMapMemory(vkDevice, stagingMemory, 0, size, 0, &pData);
+	memcpy(pData, m_vertices.data(), static_cast<size_t>(size));
+	vkUnmapMemory(vkDevice, stagingMemory);
+
+	createBuffer(vkDevice,
+		vkPhysicalDevice,
+		size,
+		VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+		m_vkVertexBuffer,
+		m_vkVertexBufferMemory);
+
+	copyBuffer(vkDevice, vkCommandPool, vkQueue, stagingBuffer, m_vkVertexBuffer, size);
+	vkDestroyBuffer(vkDevice, stagingBuffer, nullptr);
+	vkFreeMemory(vkDevice, stagingMemory, nullptr);
+}
+
+
+/**************************************************************
+* Description
+*		Creates index buffer, memoory and copies data to it.
+* Returns
+*		void
+* Notes
+*
+**************************************************************/
+void Model::createIndexBuffer(
+	VkDevice vkDevice,
+	VkPhysicalDevice vkPhysicalDevice,
+	VkCommandPool vkCommandPool,
+	VkQueue vkQueue)
+{
+	uint32_t size = sizeof(m_indices[0]) * m_indices.size();
+	VkBuffer stagingBuffer;
+	VkDeviceMemory stagingMemory;
+	createBuffer(vkDevice,
+		vkPhysicalDevice,
+		size,
+		VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+		stagingBuffer,
+		stagingMemory);
+
+	void *pData = nullptr;
+	vkMapMemory(vkDevice, stagingMemory, 0, size, 0, &pData);
+	memcpy(pData, m_indices.data(), static_cast<size_t>(size));
+	vkUnmapMemory(vkDevice, stagingMemory);
+
+	createBuffer(vkDevice,
+		vkPhysicalDevice,
+		size,
+		VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+		m_vkIndexBuffer,
+		m_vkIndexBufferMemory);
+
+	copyBuffer(vkDevice, vkCommandPool, vkQueue, stagingBuffer, m_vkIndexBuffer, size);
+	vkDestroyBuffer(vkDevice, stagingBuffer, nullptr);
+	vkFreeMemory(vkDevice, stagingMemory, nullptr);
+}
+
+/**************************************************************
+* Description
+*		Cleans up the objects.
+* Returns
+*		void
+* Notes
+*
+**************************************************************/
+void Model::cleanup(VkDevice vkDevice)
+{
+	vkDestroyBuffer(vkDevice, m_vkVertexBuffer, nullptr);
+	vkFreeMemory(vkDevice, m_vkVertexBufferMemory, nullptr);
+	vkDestroyBuffer(vkDevice, m_vkIndexBuffer, nullptr);
+	vkFreeMemory(vkDevice, m_vkIndexBufferMemory, nullptr);
 }

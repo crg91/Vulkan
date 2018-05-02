@@ -6,11 +6,6 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include<stb_image.h>
 
-#define TINYOBJLOADER_IMPLEMENTATION
-#include<tiny_obj_loader.h>
-
-#include <unordered_map>
-
 /**************************************************************
 * Description
 *		Reads the file in binary format and returns the data
@@ -106,9 +101,9 @@ void HelloTriangleApplication::initVulkan()
 	createTextureImage();
 	createTextureImageView();
 	createTextureSampler();
-	loadModel();
-	createVertexBuffer();
-	createIndexBuffer();
+	m_model.loadModel();
+	m_model.createVertexBuffer(m_vkDevice, m_vkPhysicalDevice, m_vkCommandPool, m_vkGraphicsQueue);
+	m_model.createIndexBuffer(m_vkDevice, m_vkPhysicalDevice, m_vkCommandPool, m_vkGraphicsQueue);
 	createUniformBuffer();
 	createDescriptorPool();
 	createDescriptorSet();
@@ -238,116 +233,6 @@ void HelloTriangleApplication::createSemaphores()
 
 /**************************************************************
 * Description
-*		Helper function to create a buffer and buffer memory.
-* Returns
-*		void
-* Notes
-*
-**************************************************************/
-void HelloTriangleApplication::createBuffer(
-	VkDeviceSize size,
-	VkBufferUsageFlags usageFlags,
-	VkMemoryPropertyFlags properties,
-	VkBuffer &buffer,
-	VkDeviceMemory &bufferMemory)
-{
-	VkBufferCreateInfo bufferCreateInfo = {};
-	bufferCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-	bufferCreateInfo.size = size;
-	bufferCreateInfo.usage = usageFlags;
-	bufferCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-	if (VK_SUCCESS != vkCreateBuffer(m_vkDevice, &bufferCreateInfo, nullptr, &buffer))
-	{
-		throw std::runtime_error("Could not create vertex buffer.");
-	}
-
-	VkMemoryRequirements memoryRequirements;
-	vkGetBufferMemoryRequirements(m_vkDevice, buffer, &memoryRequirements);
-
-	VkMemoryAllocateInfo memoryAllocateInfo = {};
-	memoryAllocateInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-	memoryAllocateInfo.allocationSize = memoryRequirements.size;
-	memoryAllocateInfo.memoryTypeIndex = findMemoryType(memoryRequirements.memoryTypeBits,
-		properties);
-	if (VK_SUCCESS != vkAllocateMemory(m_vkDevice, &memoryAllocateInfo, nullptr, &bufferMemory))
-	{
-		throw std::runtime_error("Could not allocate vertex buffer memory on device.");
-	}
-	vkBindBufferMemory(m_vkDevice, buffer, bufferMemory, 0);
-}
-
-/**************************************************************
-* Description
-*		Creates vertex buffer and memory and copies data to it.
-* Returns
-*		void
-* Notes
-*
-**************************************************************/
-void HelloTriangleApplication::createVertexBuffer()
-{
-	uint32_t size = sizeof(m_vertices[0]) * m_vertices.size();
-	VkBuffer stagingBuffer;
-	VkDeviceMemory stagingMemory;
-	createBuffer(size,
-		VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-		stagingBuffer,
-		stagingMemory);
-
-	void *pData = nullptr;
-	vkMapMemory(m_vkDevice, stagingMemory, 0, size, 0, &pData);
-	memcpy(pData, m_vertices.data(), static_cast<size_t>(size));
-	vkUnmapMemory(m_vkDevice, stagingMemory);
-
-	createBuffer(size,
-		VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-		m_vkVertexBuffer,
-		m_vkVertexBufferMemory);
-
-	copyBuffer(stagingBuffer, m_vkVertexBuffer, size);
-	vkDestroyBuffer(m_vkDevice, stagingBuffer, nullptr);
-	vkFreeMemory(m_vkDevice, stagingMemory, nullptr);
-}
-
-/**************************************************************
-* Description
-*		Creates index buffer, memoory and copies data to it.
-* Returns
-*		void
-* Notes
-*
-**************************************************************/
-void HelloTriangleApplication::createIndexBuffer()
-{
-	uint32_t size = sizeof(m_indices[0]) * m_indices.size();
-	VkBuffer stagingBuffer;
-	VkDeviceMemory stagingMemory;
-	createBuffer(size,
-		VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-		stagingBuffer,
-		stagingMemory);
-
-	void *pData = nullptr;
-	vkMapMemory(m_vkDevice, stagingMemory, 0, size, 0, &pData);
-	memcpy(pData, m_indices.data(), static_cast<size_t>(size));
-	vkUnmapMemory(m_vkDevice, stagingMemory);
-
-	createBuffer(size,
-		VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-		m_vkIndexBuffer,
-		m_vkIndexBufferMemory);
-
-	copyBuffer(stagingBuffer, m_vkIndexBuffer, size);
-	vkDestroyBuffer(m_vkDevice, stagingBuffer, nullptr);
-	vkFreeMemory(m_vkDevice, stagingMemory, nullptr);
-}
-
-/**************************************************************
-* Description
 *		Creates uniform buffer and memory. We use this buffer to
 *		copy data from CPU so that it can be passed to shaders.
 *		The data is feeded potentially every frame and that's
@@ -361,30 +246,13 @@ void HelloTriangleApplication::createIndexBuffer()
 void HelloTriangleApplication::createUniformBuffer()
 {
 	uint32_t size = sizeof(UniformBufferObject);
-	createBuffer(size,
+	createBuffer(m_vkDevice,
+		m_vkPhysicalDevice,
+		size,
 		VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
 		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
 		m_vkUniformBuffer,
 		m_vkUniformBufferMemory);
-}
-
-/**************************************************************
-* Description
-*		Copies buffers
-* Returns
-*		void
-* Notes
-*
-**************************************************************/
-void HelloTriangleApplication::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size)
-{
-	VkCommandBuffer commandBuffer = beginSingleTimeCommands();
-	VkBufferCopy copyRegion = {};
-	copyRegion.srcOffset = 0;
-	copyRegion.dstOffset = 0;
-	copyRegion.size = size;
-	vkCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
-	endSingleTimeCommands(commandBuffer);
 }
 
 /**************************************************************
@@ -564,7 +432,9 @@ void HelloTriangleApplication::createTextureImage()
 	}
 	VkBuffer stagingBuffer;
 	VkDeviceMemory stagingBufferMemory;
-	createBuffer(imageSize,
+	createBuffer(m_vkDevice,
+		m_vkPhysicalDevice,
+		imageSize,
 		VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
 		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
 		stagingBuffer,
@@ -659,58 +529,6 @@ void HelloTriangleApplication::createImage(
 
 /**************************************************************
 * Description
-*		Allocates a command buffer and begins it for the user to 
-*		record commands.
-* Returns
-*		VkCommandBuffer
-* Notes
-*
-**************************************************************/
-VkCommandBuffer HelloTriangleApplication::beginSingleTimeCommands()
-{
-	VkCommandBufferAllocateInfo commandBufferAllocInfo = {};
-	commandBufferAllocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-	commandBufferAllocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-	commandBufferAllocInfo.commandPool = m_vkCommandPool;
-	commandBufferAllocInfo.commandBufferCount = 1;
-
-	VkCommandBuffer commandBuffer;
-	if (VK_SUCCESS != vkAllocateCommandBuffers(m_vkDevice, &commandBufferAllocInfo, &commandBuffer))
-	{
-		throw std::runtime_error("Could not create command buffer for memory transfer.");
-	}
-
-	VkCommandBufferBeginInfo beginInfo = {};
-	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-	vkBeginCommandBuffer(commandBuffer, &beginInfo);
-	return commandBuffer;
-}
-
-/**************************************************************
-* Description
-*		Ends commands?
-* Returns
-*		void
-* Notes
-*
-**************************************************************/
-void HelloTriangleApplication::endSingleTimeCommands(VkCommandBuffer commandBuffer)
-{
-	vkEndCommandBuffer(commandBuffer);
-
-	VkSubmitInfo submitInfo = {};
-	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-	submitInfo.commandBufferCount = 1;
-	submitInfo.pCommandBuffers = &commandBuffer;
-
-	vkQueueSubmit(m_vkGraphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
-	vkQueueWaitIdle(m_vkGraphicsQueue);
-	vkFreeCommandBuffers(m_vkDevice, m_vkCommandPool, 1, &commandBuffer);
-}
-
-/**************************************************************
-* Description
 *		Transition image layouts.
 * Returns
 *		void
@@ -724,7 +542,7 @@ void HelloTriangleApplication::transitionImageLayout(
 	VkImageLayout newLayout,
 	uint32_t mipLevels)
 {
-	VkCommandBuffer commandBuffer = beginSingleTimeCommands();
+	VkCommandBuffer commandBuffer = beginSingleTimeCommands(m_vkDevice, m_vkCommandPool);
 	VkImageMemoryBarrier memoryBarrier = {};
 	memoryBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
 	memoryBarrier.oldLayout = oldLayout;
@@ -792,7 +610,7 @@ void HelloTriangleApplication::transitionImageLayout(
 		1,
 		&memoryBarrier);
 
-	endSingleTimeCommands(commandBuffer);
+	endSingleTimeCommands(m_vkDevice, m_vkCommandPool, m_vkGraphicsQueue, commandBuffer);
 }
 
 /**************************************************************
@@ -805,7 +623,7 @@ void HelloTriangleApplication::transitionImageLayout(
 **************************************************************/
 void HelloTriangleApplication::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height)
 {
-	VkCommandBuffer commandBuffer = beginSingleTimeCommands();
+	VkCommandBuffer commandBuffer = beginSingleTimeCommands(m_vkDevice, m_vkCommandPool);
 
 	VkBufferImageCopy region = {};
 	region.bufferOffset = 0;
@@ -819,7 +637,7 @@ void HelloTriangleApplication::copyBufferToImage(VkBuffer buffer, VkImage image,
 	region.imageOffset = { 0, 0, 0 };
 	region.imageExtent = { width, height, 1 };
 	vkCmdCopyBufferToImage(commandBuffer, buffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
-	endSingleTimeCommands(commandBuffer);
+	endSingleTimeCommands(m_vkDevice, m_vkCommandPool, m_vkGraphicsQueue, commandBuffer);
 }
 
 /**************************************************************
@@ -1005,10 +823,7 @@ void HelloTriangleApplication::cleanup()
 	vkFreeMemory(m_vkDevice, m_vkTextureMemory, nullptr);
 	vkDestroyBuffer(m_vkDevice, m_vkUniformBuffer, nullptr);
 	vkFreeMemory(m_vkDevice, m_vkUniformBufferMemory, nullptr);
-	vkDestroyBuffer(m_vkDevice, m_vkVertexBuffer, nullptr);
-	vkFreeMemory(m_vkDevice, m_vkVertexBufferMemory, nullptr);
-	vkDestroyBuffer(m_vkDevice, m_vkIndexBuffer, nullptr);
-	vkFreeMemory(m_vkDevice, m_vkIndexBufferMemory, nullptr);
+	m_model.cleanup(m_vkDevice);
 	vkDestroySemaphore(m_vkDevice, m_vkImageAvailableSemaphore, nullptr);
 	vkDestroySemaphore(m_vkDevice, m_vkRenderFinishedSemaphore, nullptr);
 	vkDestroyCommandPool(m_vkDevice, m_vkCommandPool, nullptr);
@@ -1436,55 +1251,6 @@ bool HelloTriangleApplication::hasStencilComponent(VkFormat format)
 
 /**************************************************************
 * Description
-*		Loads the model from obj file.
-* Returns
-*		void
-* Notes
-*
-**************************************************************/
-void HelloTriangleApplication::loadModel()
-{
-	tinyobj::attrib_t attrib;
-	std::vector<tinyobj::shape_t> shapes;
-	std::vector<tinyobj::material_t> materials;
-	std::string err;
-
-	if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &err, MODEL_PATH.c_str()))
-	{
-		throw std::runtime_error(err);
-	}
-
-	std::unordered_map<Vertex, uint32_t> uniqueVertices = {};
-	for (const auto& shape : shapes)
-	{
-		for (const auto& index: shape.mesh.indices)
-		{
-			Vertex vertex = {};
-			vertex.m_position = {
-				attrib.vertices[3 * index.vertex_index + 0],
-				attrib.vertices[3 * index.vertex_index + 1],
-				attrib.vertices[3 * index.vertex_index + 2] };
-
-			if (index.texcoord_index != -1)
-			{
-				vertex.m_texCoord = {
-					attrib.texcoords[2 * index.texcoord_index + 0],
-					1.0f - attrib.texcoords[2 * index.texcoord_index + 1] };
-			}
-
-			vertex.m_color = { 1.0f, 1.0f, 1.0f };
-			if (0 == uniqueVertices.count(vertex))
-			{
-				uniqueVertices[vertex] = static_cast<uint32_t>(m_vertices.size());
-				m_vertices.push_back(vertex);
-			}
-			m_indices.push_back(uniqueVertices[vertex]);
-		}
-	}
-}
-
-/**************************************************************
-* Description
 *		Generates mipmaps
 * Returns
 *		void
@@ -1497,7 +1263,7 @@ void HelloTriangleApplication::generateMipmaps(
 	int32_t texHeight,
 	uint32_t mipLevels)
 {
-	VkCommandBuffer commandBuffer = beginSingleTimeCommands();
+	VkCommandBuffer commandBuffer = beginSingleTimeCommands(m_vkDevice, m_vkCommandPool);
 	VkImageMemoryBarrier barrier = {};
 	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
 	barrier.image = image;
@@ -1593,7 +1359,7 @@ void HelloTriangleApplication::generateMipmaps(
 		1,
 		&barrier);
 
-	endSingleTimeCommands(commandBuffer);
+	endSingleTimeCommands(m_vkDevice, m_vkCommandPool, m_vkGraphicsQueue, commandBuffer);
 }
 
 /**************************************************************
@@ -2507,12 +2273,12 @@ void HelloTriangleApplication::createAndFillCommandBuffers()
 
 		vkCmdBeginRenderPass(m_vkCommandBuffers[i], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 		vkCmdBindPipeline(m_vkCommandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, m_vkGraphicsPipeline);
-		VkBuffer vertexBuffers[] = { m_vkVertexBuffer };
+		VkBuffer vertexBuffers[] = { m_model.getVertexBuffer() };
 		VkDeviceSize offsets[] = { 0 };
 		vkCmdBindVertexBuffers(m_vkCommandBuffers[i], 0, 1, vertexBuffers, offsets);
-		vkCmdBindIndexBuffer(m_vkCommandBuffers[i], m_vkIndexBuffer, 0, VK_INDEX_TYPE_UINT32);
+		vkCmdBindIndexBuffer(m_vkCommandBuffers[i], m_model.getIndexBuffer(), 0, VK_INDEX_TYPE_UINT32);
 		vkCmdBindDescriptorSets(m_vkCommandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, m_vkPipelineLayout, 0, 1, &m_vkDescriptorSet, 0, nullptr);
-		vkCmdDrawIndexed(m_vkCommandBuffers[i], static_cast<uint32_t>(m_indices.size()), 1, 0, 0, 0);
+		vkCmdDrawIndexed(m_vkCommandBuffers[i], m_model.getIndicesSize(), 1, 0, 0, 0);
 		vkCmdEndRenderPass(m_vkCommandBuffers[i]);
 
 		if (VK_SUCCESS != vkEndCommandBuffer(m_vkCommandBuffers[i]))

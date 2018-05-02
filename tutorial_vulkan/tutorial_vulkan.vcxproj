@@ -22,11 +22,13 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="camera.cpp" />
     <ClCompile Include="model.cpp" />
+    <ClCompile Include="utilities.cpp" />
     <ClCompile Include="vulkan.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="camera.h" />
     <ClInclude Include="model.h" />
+    <ClInclude Include="utilities.h" />
     <ClInclude Include="vulkan.h" />
   </ItemGroup>
   <ItemGroup>

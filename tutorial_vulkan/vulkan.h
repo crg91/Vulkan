@@ -15,10 +15,11 @@
 #include <array>
 #include "camera.h"
 #include "model.h"
+#include "utilities.h"
 
 const int WIDTH = 800;
 const int HEIGHT = 600;
-const std::string MODEL_PATH = "models/chalet.obj";
+
 const std::string TEXTURE_PATH = "textures/chalet.jpg";
 
 #ifdef NDEBUG
@@ -53,61 +54,6 @@ struct UniformBufferObject
 	glm::mat4 m_proj;
 };
 
-struct Vertex
-{
-	glm::vec3 m_position;
-	glm::vec3 m_color;
-	glm::vec2 m_texCoord;
-
-	static VkVertexInputBindingDescription getBindingDescription()
-	{
-		VkVertexInputBindingDescription bindingDescription = {};
-		bindingDescription.binding = 0;
-		bindingDescription.stride = sizeof(Vertex);
-		bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-		return bindingDescription;
-	}
-
-	static std::array<VkVertexInputAttributeDescription, 3> getAttributeDescriptions()
-	{
-		std::array<VkVertexInputAttributeDescription, 3> attributeDescriptions = {};
-		attributeDescriptions[0].binding = 0;
-		attributeDescriptions[0].location = 0;
-		attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
-		attributeDescriptions[0].offset = offsetof(Vertex, m_position);
-		attributeDescriptions[1].binding = 0;
-		attributeDescriptions[1].location = 1;
-		attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
-		attributeDescriptions[1].offset = offsetof(Vertex, m_color);
-		attributeDescriptions[2].binding = 0;
-		attributeDescriptions[2].location = 2;
-		attributeDescriptions[2].format = VK_FORMAT_R32G32_SFLOAT;
-		attributeDescriptions[2].offset = offsetof(Vertex, m_texCoord);
-		return attributeDescriptions;
-	}
-
-	bool operator==(const Vertex& other) const
-	{
-		return m_position == other.m_position &&
-			m_texCoord == other.m_texCoord &&
-			m_color == other.m_color;
-	}
-};
-
-
-namespace std
-{
-	template<> struct hash<Vertex>
-	{
-		size_t operator()(Vertex const& vertex) const
-		{
-			return ((hash<glm::vec3>()(vertex.m_position) ^
-				(hash<glm::vec3>()(vertex.m_color) << 1)) >> 1) ^
-				(hash<glm::vec2>()(vertex.m_texCoord) << 1);
-		}
-	};
-}
-
 class HelloTriangleApplication
 {
 public:
@@ -127,9 +73,7 @@ public:
 		m_vkGraphicsPipeline(VK_NULL_HANDLE),
 		m_vkCommandPool(VK_NULL_HANDLE),
 		m_vkImageAvailableSemaphore(VK_NULL_HANDLE),
-		m_vkRenderFinishedSemaphore(VK_NULL_HANDLE),
-		m_vkVertexBuffer(VK_NULL_HANDLE),
-		m_vkVertexBufferMemory(VK_NULL_HANDLE)
+		m_vkRenderFinishedSemaphore(VK_NULL_HANDLE)
 	{}
 
 private:
@@ -167,12 +111,8 @@ private:
 	void createAndFillCommandBuffers();
 	void drawFrame();
 	void createSemaphores();
-	void createVertexBuffer();
-	void createIndexBuffer();
 	void createUniformBuffer();
 	uint32_t findMemoryType(int32_t typeFilter, VkMemoryPropertyFlags properties);
-	void createBuffer(VkDeviceSize size, VkBufferUsageFlags usageFlags, VkMemoryPropertyFlags properties, VkBuffer &buffer, VkDeviceMemory &bufferMemory);
-	void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
 	void createDescriptorSetLayout();
 	void updateUniformBuffer();
 	void createDescriptorPool();
@@ -188,8 +128,6 @@ private:
 		VkImage &vkImage,
 		VkDeviceMemory &imageMemory
 	);
-	VkCommandBuffer beginSingleTimeCommands();
-	void endSingleTimeCommands(VkCommandBuffer commandBuffer);
 
 	void transitionImageLayout(
 		VkImage image,
@@ -224,7 +162,6 @@ private:
 	);
 	VkFormat findDepthFormat();
 	bool hasStencilComponent(VkFormat format);
-	void loadModel();
 	void generateMipmaps(
 		VkImage image,
 		int32_t texWidth,
@@ -255,10 +192,8 @@ private:
 	std::vector<VkCommandBuffer> m_vkCommandBuffers;
 	VkSemaphore m_vkImageAvailableSemaphore; // Image available for rendering.
 	VkSemaphore m_vkRenderFinishedSemaphore; // Image available for presentation.
-	VkBuffer m_vkVertexBuffer;
 	VkBuffer m_vkIndexBuffer;
 	VkBuffer m_vkUniformBuffer;
-	VkDeviceMemory m_vkVertexBufferMemory;
 	VkDeviceMemory m_vkIndexBufferMemory;
 	VkDeviceMemory m_vkUniformBufferMemory;
 	VkDescriptorSetLayout m_vkDescriptorSetLayout;
@@ -271,8 +206,6 @@ private:
 	VkImage m_vkDepthImage;
 	VkDeviceMemory m_vkDepthImageMemory;
 	VkImageView m_vkDepthImageView;
-	std::vector<Vertex> m_vertices;
-	std::vector<uint32_t> m_indices;
 	uint32_t m_mipLevels;
 	Camera m_camera;
 	Model m_model;
