@@ -17,6 +17,12 @@ Model::Model()
 :m_vkVertexBuffer(VK_NULL_HANDLE),
 m_vkVertexBufferMemory(VK_NULL_HANDLE)
 {
+	m_durations.m_xDuration = 0.0;
+	m_durations.m_yDuration = 0.0;
+	m_durations.m_zDuration = 0.0;
+	m_fKeyPressed[0] = false;
+	m_fKeyPressed[1] = false;
+	m_fKeyPressed[2] = false;
 }
 
 /**************************************************************
@@ -235,7 +241,7 @@ void Model::loadModel()
 	std::vector<tinyobj::material_t> materials;
 	std::string err;
 
-	if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &err, MODEL_PATH.c_str()))
+	if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &err, m_modelPath.c_str()))
 	{
 		throw std::runtime_error(err);
 	}
@@ -358,6 +364,28 @@ void Model::createIndexBuffer(
 
 /**************************************************************
 * Description
+*		Creates uniform buffer and memory associated with it.
+* Returns
+*		void
+* Notes
+*
+**************************************************************/
+void Model::createUniformBuffer(
+	VkDevice vkDevice,
+	VkPhysicalDevice vkPhysicalDevice)
+{
+	uint32_t size = sizeof(UniformBufferObject);
+	createBuffer(vkDevice,
+		vkPhysicalDevice,
+		size,
+		VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+		m_vkUniformBuffer,
+		m_vkUniformBufferMemory);
+}
+
+/**************************************************************
+* Description
 *		Cleans up the objects.
 * Returns
 *		void
@@ -370,4 +398,6 @@ void Model::cleanup(VkDevice vkDevice)
 	vkFreeMemory(vkDevice, m_vkVertexBufferMemory, nullptr);
 	vkDestroyBuffer(vkDevice, m_vkIndexBuffer, nullptr);
 	vkFreeMemory(vkDevice, m_vkIndexBufferMemory, nullptr);
+	vkDestroyBuffer(vkDevice, m_vkUniformBuffer, nullptr);
+	vkFreeMemory(vkDevice, m_vkUniformBufferMemory, nullptr);
 }

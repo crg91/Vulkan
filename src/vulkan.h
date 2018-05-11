@@ -47,13 +47,6 @@ struct SwapChainSupportDetails
 	std::vector<VkPresentModeKHR> m_presentModes;
 };
 
-struct UniformBufferObject
-{
-	glm::mat4 m_model;
-	glm::mat4 m_view;
-	glm::mat4 m_proj;
-};
-
 class HelloTriangleApplication
 {
 public:
@@ -74,7 +67,12 @@ public:
 		m_vkCommandPool(VK_NULL_HANDLE),
 		m_vkImageAvailableSemaphore(VK_NULL_HANDLE),
 		m_vkRenderFinishedSemaphore(VK_NULL_HANDLE)
-	{}
+	{
+		m_models.resize(2);
+		m_models[0].setModelPath("models/chalet.obj");
+		m_models[1].setModelPath("models/cube.obj");
+		m_vkDescriptorSets.resize(2);
+	}
 
 private:
 	void initVulkan();
@@ -109,6 +107,9 @@ private:
 	void createFrameBuffers();
 	void createCommandPool();
 	void createAndFillCommandBuffers();
+	void loadModels();
+	void createVertexBuffers();
+	void createIndexBuffers();
 	void drawFrame();
 	void createSemaphores();
 	void createUniformBuffer();
@@ -192,13 +193,9 @@ private:
 	std::vector<VkCommandBuffer> m_vkCommandBuffers;
 	VkSemaphore m_vkImageAvailableSemaphore; // Image available for rendering.
 	VkSemaphore m_vkRenderFinishedSemaphore; // Image available for presentation.
-	VkBuffer m_vkIndexBuffer;
-	VkBuffer m_vkUniformBuffer;
-	VkDeviceMemory m_vkIndexBufferMemory;
-	VkDeviceMemory m_vkUniformBufferMemory;
 	VkDescriptorSetLayout m_vkDescriptorSetLayout;
 	VkDescriptorPool m_vkDescriptorPool;
-	VkDescriptorSet m_vkDescriptorSet;
+	std::vector<VkDescriptorSet> m_vkDescriptorSets;
 	VkImage m_vkTextureImage;
 	VkDeviceMemory m_vkTextureMemory;
 	VkImageView m_vkTextureImageView;
@@ -208,6 +205,6 @@ private:
 	VkImageView m_vkDepthImageView;
 	uint32_t m_mipLevels;
 	Camera m_camera;
-	Model m_model;
+	std::vector<Model> m_models;
 };
 

@@ -11,7 +11,6 @@
 #include<chrono>
 
 typedef std::chrono::time_point<std::chrono::steady_clock> StdTime;
-const std::string MODEL_PATH = "models/chalet.obj";
 
 #include "utilities.h"
 #include<array>
@@ -69,6 +68,13 @@ struct Vertex
 	}
 };
 
+struct UniformBufferObject
+{
+	glm::mat4 m_model;
+	glm::mat4 m_view;
+	glm::mat4 m_proj;
+};
+
 namespace std
 {
 	template<> struct hash<Vertex>
@@ -104,10 +110,14 @@ public:
 	void loadModel();
 	void createVertexBuffer(VkDevice vkDevice, VkPhysicalDevice vkPhysicalDevice, VkCommandPool vkCommandPool, VkQueue vkQueue);
 	void createIndexBuffer(VkDevice vkDevice, VkPhysicalDevice vkPhysicalDevice, VkCommandPool vkCommandPool, VkQueue vkQueue);
+	void createUniformBuffer(VkDevice vkDevice, VkPhysicalDevice vkPhysicalDevice);
 	void cleanup(VkDevice vkDevice);
 	VkBuffer getVertexBuffer() { return m_vkVertexBuffer; }
 	VkBuffer getIndexBuffer() { return m_vkIndexBuffer; }
+	VkBuffer getUniformBuffer() { return m_vkUniformBuffer; }
+	VkDeviceMemory getUniformBufferMemory() { return m_vkUniformBufferMemory; }
 	uint32_t getIndicesSize() { return static_cast<uint32_t>(m_indices.size()); }
+	void setModelPath(std::string modelPath) { m_modelPath = modelPath; }
 private:
 	DurationForRotation m_durations;
 	StdTime m_lastUpdateTime[3];
@@ -119,5 +129,8 @@ private:
 	VkDeviceMemory m_vkVertexBufferMemory;
 	VkBuffer m_vkIndexBuffer;
 	VkDeviceMemory m_vkIndexBufferMemory;
+	VkBuffer m_vkUniformBuffer;
+	VkDeviceMemory m_vkUniformBufferMemory;
+	std::string m_modelPath;
 };
 

@@ -101,9 +101,9 @@ void HelloTriangleApplication::initVulkan()
 	createTextureImage();
 	createTextureImageView();
 	createTextureSampler();
-	m_model.loadModel();
-	m_model.createVertexBuffer(m_vkDevice, m_vkPhysicalDevice, m_vkCommandPool, m_vkGraphicsQueue);
-	m_model.createIndexBuffer(m_vkDevice, m_vkPhysicalDevice, m_vkCommandPool, m_vkGraphicsQueue);
+	loadModels();
+	createVertexBuffers();
+	createIndexBuffers();
 	createUniformBuffer();
 	createDescriptorPool();
 	createDescriptorSet();
@@ -116,7 +116,6 @@ void HelloTriangleApplication::mainLoop()
 	while (!glfwWindowShouldClose(m_glfwWindow))
 	{
 		glfwPollEvents();
-
 		updateUniformBuffer();
 		drawFrame();
 	}
@@ -235,7 +234,7 @@ void HelloTriangleApplication::createSemaphores()
 * Description
 *		Creates uniform buffer and memory. We use this buffer to
 *		copy data from CPU so that it can be passed to shaders.
-*		The data is feeded potentially every frame and that's
+*		The data is fed potentially every frame and that's
 *		why we are not creating a device memory which would
 *		mean extra transfer per frame.
 * Returns
@@ -245,14 +244,10 @@ void HelloTriangleApplication::createSemaphores()
 **************************************************************/
 void HelloTriangleApplication::createUniformBuffer()
 {
-	uint32_t size = sizeof(UniformBufferObject);
-	createBuffer(m_vkDevice,
-		m_vkPhysicalDevice,
-		size,
-		VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-		m_vkUniformBuffer,
-		m_vkUniformBufferMemory);
+	for (auto &model : m_models)
+	{
+		model.createUniformBuffer(m_vkDevice, m_vkPhysicalDevice);
+	}
 }
 
 /**************************************************************
@@ -299,6 +294,66 @@ void HelloTriangleApplication::createDescriptorSetLayout()
 
 /**************************************************************
 * Description
+*		Loads the models.
+* Returns
+*		void
+* Notes
+*
+**************************************************************/
+void HelloTriangleApplication::loadModels()
+{
+	for (auto &model : m_models)
+	{
+		model.loadModel();
+	}
+}
+
+/**************************************************************
+* Description
+*		Create vertex buffers.
+* Returns
+*		void
+* Notes
+*
+**************************************************************/
+void HelloTriangleApplication::createVertexBuffers()
+{
+	for (auto &model : m_models)
+	{
+		model.createVertexBuffer(
+			m_vkDevice,
+			m_vkPhysicalDevice,
+			m_vkCommandPool,
+			m_vkGraphicsQueue
+		);
+	}
+}
+
+
+/**************************************************************
+* Description
+*		Create index buffers.
+* Returns
+*		void
+* Notes
+*
+**************************************************************/
+void HelloTriangleApplication::createIndexBuffers()
+{
+	for (auto &model : m_models)
+	{
+		model.createIndexBuffer(
+			m_vkDevice,
+			m_vkPhysicalDevice,
+			m_vkCommandPool,
+			m_vkGraphicsQueue
+		);
+	}
+}
+
+
+/**************************************************************
+* Description
 *		Updates the uniform buffer to be fed to shader.
 * Returns
 *		void
@@ -307,23 +362,28 @@ void HelloTriangleApplication::createDescriptorSetLayout()
 **************************************************************/
 void HelloTriangleApplication::updateUniformBuffer()
 {
-	UniformBufferObject ubo = {};
-
-	ubo.m_model = m_model.getModelMatrix();
-	ubo.m_view = m_camera.getViewMatrix();
-	if (m_camera.fMouseButtonPressed())
+	for (int i = 0; i < m_models.size(); ++i)
 	{
-		double xPos, yPos;
-		glfwGetCursorPos(m_glfwWindow, &xPos, &yPos);
-		m_camera.setCurrentMousePosition(xPos, yPos);
+		UniformBufferObject ubo = {};
+
+		// TODO : create model matrix for each model.
+		ubo.m_model = m_models[i].getModelMatrix();
+
+		ubo.m_view = m_camera.getViewMatrix();
+		if (m_camera.fMouseButtonPressed())
+		{
+			double xPos, yPos;
+			glfwGetCursorPos(m_glfwWindow, &xPos, &yPos);
+			m_camera.setCurrentMousePosition(xPos, yPos);
+		}
+		// ubo.m_view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+		ubo.m_proj = glm::perspective(glm::radians(45.0f), m_vkSwapchainExtent.width / (float)m_vkSwapchainExtent.height, 0.1f, 10.0f);
+		ubo.m_proj[1][1] *= -1;
+		void *data = nullptr;
+		vkMapMemory(m_vkDevice, m_models[i].getUniformBufferMemory(), 0, sizeof(ubo), 0, &data);
+		memcpy(data, &ubo, sizeof(ubo));
+		vkUnmapMemory(m_vkDevice, m_models[i].getUniformBufferMemory());
 	}
-	// ubo.m_view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-	ubo.m_proj = glm::perspective(glm::radians(45.0f), m_vkSwapchainExtent.width / (float)m_vkSwapchainExtent.height, 0.1f, 10.0f);
-	ubo.m_proj[1][1] *= -1;
-	void *data = nullptr;
-	vkMapMemory(m_vkDevice, m_vkUniformBufferMemory, 0, sizeof(ubo), 0, &data);
-	memcpy(data, &ubo, sizeof(ubo));
-	vkUnmapMemory(m_vkDevice, m_vkUniformBufferMemory);
 }
 
 /**************************************************************
@@ -338,7 +398,7 @@ void HelloTriangleApplication::updateUniformBuffer()
 void HelloTriangleApplication::createDescriptorPool()
 {
 	std::array<VkDescriptorPoolSize, 2> poolSizes = {};
-	poolSizes[0].descriptorCount = 1;
+	poolSizes[0].descriptorCount = 2;
 	poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	poolSizes[1].descriptorCount = 1;
 	poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
@@ -347,7 +407,7 @@ void HelloTriangleApplication::createDescriptorPool()
 	poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
 	poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
 	poolInfo.pPoolSizes = poolSizes.data();
-	poolInfo.maxSets = 1;
+	poolInfo.maxSets = 2;
 	if (VK_SUCCESS != vkCreateDescriptorPool(m_vkDevice, &poolInfo, nullptr, &m_vkDescriptorPool))
 	{
 		throw std::runtime_error("Could not create descriptor pool");
@@ -368,48 +428,53 @@ void HelloTriangleApplication::createDescriptorSet()
 	VkDescriptorSetAllocateInfo allocInfo = {};
 	allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
 	allocInfo.descriptorPool = m_vkDescriptorPool;
-	allocInfo.descriptorSetCount = 1;
-	allocInfo.pSetLayouts = &m_vkDescriptorSetLayout;
-	if (VK_SUCCESS != vkAllocateDescriptorSets(m_vkDevice, &allocInfo, &m_vkDescriptorSet))
+	allocInfo.descriptorSetCount = m_models.size();
+	VkDescriptorSetLayout layout[2] = { m_vkDescriptorSetLayout , m_vkDescriptorSetLayout };
+	allocInfo.pSetLayouts = layout;
+	VkResult vkResult = vkAllocateDescriptorSets(m_vkDevice, &allocInfo, m_vkDescriptorSets.data());
+	if (VK_SUCCESS != vkResult)
 	{
 		throw std::runtime_error("Could not create descriptor set");
 	}
-	VkDescriptorBufferInfo bufferInfo = {};
-	bufferInfo.buffer = m_vkUniformBuffer;
-	bufferInfo.offset = 0;
-	bufferInfo.range = sizeof(UniformBufferObject);
 
-	VkDescriptorImageInfo imageInfo = {};
-	imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-	imageInfo.imageView = m_vkTextureImageView;
-	imageInfo.sampler = m_vkTextureSampler;
+	for (int i = 0; i < m_vkDescriptorSets.size(); ++i)
+	{
+		VkDescriptorBufferInfo bufferInfo = {};
+		bufferInfo.buffer = m_models[i].getUniformBuffer();
+		bufferInfo.offset = 0;
+		bufferInfo.range = sizeof(UniformBufferObject);
 
-	std::array<VkWriteDescriptorSet,2> descriptorWrites = {};
-	descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	descriptorWrites[0].dstSet = m_vkDescriptorSet;
-	descriptorWrites[0].dstBinding = 0;
-	descriptorWrites[0].dstArrayElement = 0;
+		VkDescriptorImageInfo imageInfo = {};
+		imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		imageInfo.imageView = m_vkTextureImageView;
+		imageInfo.sampler = m_vkTextureSampler;
 
-	descriptorWrites[0].descriptorCount = 1;
-	descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	descriptorWrites[0].pBufferInfo = &bufferInfo;
-	descriptorWrites[0].pImageInfo = nullptr;
-	descriptorWrites[0].pTexelBufferView = nullptr;
+		std::array<VkWriteDescriptorSet, 2> descriptorWrites = {};
+		descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		descriptorWrites[0].dstSet = m_vkDescriptorSets[i];
+		descriptorWrites[0].dstBinding = 0;
+		descriptorWrites[0].dstArrayElement = 0;
+		descriptorWrites[0].descriptorCount = 1;
+		descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		descriptorWrites[0].pBufferInfo = &bufferInfo;
+		descriptorWrites[0].pImageInfo = nullptr;
+		descriptorWrites[0].pTexelBufferView = nullptr;
 
-	descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	descriptorWrites[1].dstSet = m_vkDescriptorSet;
-	descriptorWrites[1].dstBinding = 1;
-	descriptorWrites[1].dstArrayElement = 0;
-	descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	descriptorWrites[1].descriptorCount = 1;
-	descriptorWrites[1].pImageInfo = &imageInfo;
+		descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		descriptorWrites[1].dstSet = m_vkDescriptorSets[i];
+		descriptorWrites[1].dstBinding = 1;
+		descriptorWrites[1].dstArrayElement = 0;
+		descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		descriptorWrites[1].descriptorCount = 1;
+		descriptorWrites[1].pImageInfo = &imageInfo;
 
-	vkUpdateDescriptorSets(
-		m_vkDevice,
-		static_cast<uint32_t>(descriptorWrites.size()),
-		descriptorWrites.data(),
-		0,
-		nullptr);
+		vkUpdateDescriptorSets(
+			m_vkDevice,
+			static_cast<uint32_t>(descriptorWrites.size()),
+			descriptorWrites.data(),
+			0,
+			nullptr);
+	}
 }
 
 /**************************************************************
@@ -821,9 +886,11 @@ void HelloTriangleApplication::cleanup()
 	vkDestroyImageView(m_vkDevice, m_vkTextureImageView, nullptr);
 	vkDestroyImage(m_vkDevice, m_vkTextureImage, nullptr);
 	vkFreeMemory(m_vkDevice, m_vkTextureMemory, nullptr);
-	vkDestroyBuffer(m_vkDevice, m_vkUniformBuffer, nullptr);
-	vkFreeMemory(m_vkDevice, m_vkUniformBufferMemory, nullptr);
-	m_model.cleanup(m_vkDevice);
+
+	for (auto model : m_models)
+	{
+		model.cleanup(m_vkDevice);
+	}
 	vkDestroySemaphore(m_vkDevice, m_vkImageAvailableSemaphore, nullptr);
 	vkDestroySemaphore(m_vkDevice, m_vkRenderFinishedSemaphore, nullptr);
 	vkDestroyCommandPool(m_vkDevice, m_vkCommandPool, nullptr);
@@ -948,19 +1015,19 @@ void HelloTriangleApplication::onKeyPress(
 	case GLFW_KEY_DOWN:
 		if (GLFW_PRESS == action || GLFW_REPEAT == action)
 		{
-			app->m_model.setXKeyPressed(true);
+			app->m_models[0].setXKeyPressed(true);
 			if (GLFW_KEY_UP == key)
 			{
-				app->m_model.fXDirectionPositive(false);
+				app->m_models[0].fXDirectionPositive(false);
 			}
 			else
 			{
-				app->m_model.fXDirectionPositive(true);
+				app->m_models[0].fXDirectionPositive(true);
 			}
 		}
 		else
 		{
-			app->m_model.setXKeyPressed(false);
+			app->m_models[0].setXKeyPressed(false);
 		}
 
 		break;
@@ -968,38 +1035,38 @@ void HelloTriangleApplication::onKeyPress(
 	case GLFW_KEY_LEFT:
 		if (GLFW_PRESS == action || GLFW_REPEAT == action)
 		{
-			app->m_model.setYKeyPressed(true);
+			app->m_models[0].setYKeyPressed(true);
 			if (GLFW_KEY_LEFT == key)
 			{
-				app->m_model.fYDirectionPositive(false);
+				app->m_models[0].fYDirectionPositive(false);
 			}
 			else
 			{
-				app->m_model.fYDirectionPositive(true);
+				app->m_models[0].fYDirectionPositive(true);
 			}
 		}
 		else
 		{
-			app->m_model.setYKeyPressed(false);
+			app->m_models[0].setYKeyPressed(false);
 		}
 		break;
 	case GLFW_KEY_M:
 	case GLFW_KEY_N:
 		if (GLFW_PRESS == action || GLFW_REPEAT == action)
 		{
-			app->m_model.setZKeyPressed(true);
+			app->m_models[0].setZKeyPressed(true);
 			if (GLFW_KEY_N == key)
 			{
-				app->m_model.fZDirectionPositive(true);
+				app->m_models[0].fZDirectionPositive(true);
 			}
 			else
 			{
-				app->m_model.fZDirectionPositive(false);
+				app->m_models[0].fZDirectionPositive(false);
 			}
 		}
 		else
 		{
-			app->m_model.setZKeyPressed(false);
+			app->m_models[0].setZKeyPressed(false);
 		}
 		break;
 	}
@@ -2273,12 +2340,23 @@ void HelloTriangleApplication::createAndFillCommandBuffers()
 
 		vkCmdBeginRenderPass(m_vkCommandBuffers[i], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 		vkCmdBindPipeline(m_vkCommandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, m_vkGraphicsPipeline);
-		VkBuffer vertexBuffers[] = { m_model.getVertexBuffer() };
-		VkDeviceSize offsets[] = { 0 };
-		vkCmdBindVertexBuffers(m_vkCommandBuffers[i], 0, 1, vertexBuffers, offsets);
-		vkCmdBindIndexBuffer(m_vkCommandBuffers[i], m_model.getIndexBuffer(), 0, VK_INDEX_TYPE_UINT32);
-		vkCmdBindDescriptorSets(m_vkCommandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, m_vkPipelineLayout, 0, 1, &m_vkDescriptorSet, 0, nullptr);
-		vkCmdDrawIndexed(m_vkCommandBuffers[i], m_model.getIndicesSize(), 1, 0, 0, 0);
+		for (int j = 0; j < m_models.size(); ++j)
+		{
+			VkBuffer vertexBuffers[] = { m_models[j].getVertexBuffer() };
+			VkDeviceSize offsets[] = { 0 };
+			vkCmdBindVertexBuffers(m_vkCommandBuffers[i], 0, 1, vertexBuffers, offsets);
+			vkCmdBindIndexBuffer(m_vkCommandBuffers[i], m_models[j].getIndexBuffer(), 0, VK_INDEX_TYPE_UINT32);
+			vkCmdBindDescriptorSets(
+				m_vkCommandBuffers[i],
+				VK_PIPELINE_BIND_POINT_GRAPHICS,
+				m_vkPipelineLayout,
+				0,
+				1,
+				&m_vkDescriptorSets[j],
+				0,
+				nullptr);
+			vkCmdDrawIndexed(m_vkCommandBuffers[i], m_models[j].getIndicesSize(), 1, 0, 0, 0);
+		}
 		vkCmdEndRenderPass(m_vkCommandBuffers[i]);
 
 		if (VK_SUCCESS != vkEndCommandBuffer(m_vkCommandBuffers[i]))
