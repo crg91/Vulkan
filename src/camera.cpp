@@ -30,7 +30,7 @@ Camera::Camera():m_fMousePressed(false)
 {
 	m_phi = 90.0f;
 	m_theta = 0.0f;
-	m_radius = 3.0f;
+	m_radius = 5.0f;
 }
 
 /**************************************************************

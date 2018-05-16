@@ -23,6 +23,7 @@ m_vkVertexBufferMemory(VK_NULL_HANDLE)
 	m_fKeyPressed[0] = false;
 	m_fKeyPressed[1] = false;
 	m_fKeyPressed[2] = false;
+	m_position = glm::vec3(0);
 }
 
 /**************************************************************
@@ -124,6 +125,7 @@ glm::mat4 Model::getModelMatrix()
 	rotateZ();
 
 	return
+		glm::translate(glm::mat4(1.0f), m_position) *
 		glm::rotate(glm::mat4(1.0f), m_durations.m_xDuration * glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f))*
 		glm::rotate(glm::mat4(1.0f), m_durations.m_yDuration * glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f))*
 		glm::rotate(glm::mat4(1.0f), m_durations.m_zDuration * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
@@ -400,4 +402,18 @@ void Model::cleanup(VkDevice vkDevice)
 	vkFreeMemory(vkDevice, m_vkIndexBufferMemory, nullptr);
 	vkDestroyBuffer(vkDevice, m_vkUniformBuffer, nullptr);
 	vkFreeMemory(vkDevice, m_vkUniformBufferMemory, nullptr);
+}
+
+
+/**************************************************************
+* Description
+*		Translates the object by given vector.
+* Returns
+*		void
+* Notes
+*
+**************************************************************/
+void Model::translate(glm::vec3 translationVector)
+{
+	m_position += translationVector;
 }

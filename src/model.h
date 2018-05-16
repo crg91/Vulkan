@@ -112,6 +112,7 @@ public:
 	void createIndexBuffer(VkDevice vkDevice, VkPhysicalDevice vkPhysicalDevice, VkCommandPool vkCommandPool, VkQueue vkQueue);
 	void createUniformBuffer(VkDevice vkDevice, VkPhysicalDevice vkPhysicalDevice);
 	void cleanup(VkDevice vkDevice);
+	void translate(glm::vec3 translationVector);
 	VkBuffer getVertexBuffer() { return m_vkVertexBuffer; }
 	VkBuffer getIndexBuffer() { return m_vkIndexBuffer; }
 	VkBuffer getUniformBuffer() { return m_vkUniformBuffer; }
@@ -132,5 +133,6 @@ private:
 	VkBuffer m_vkUniformBuffer;
 	VkDeviceMemory m_vkUniformBufferMemory;
 	std::string m_modelPath;
+	glm::vec3 m_position;
 };
 
