@@ -68,11 +68,10 @@ public:
 		m_vkImageAvailableSemaphore(VK_NULL_HANDLE),
 		m_vkRenderFinishedSemaphore(VK_NULL_HANDLE)
 	{
-		m_models.resize(2);
-		m_models[0].setModelPath("models/chalet.obj");
-		m_models[1].setModelPath("models/chalet.obj");
-		m_models[1].translate(glm::vec3(2.0f, 0.0, 0.0f));
-		m_vkDescriptorSets.resize(2);
+		m_models.resize(1);
+		m_models[0].setModelPath("models/cube.obj");
+		m_models[0].setCenter(glm::vec3(-0.5f, -0.5f, -0.5f));
+		m_vkDescriptorSets.resize(1);
 	}
 
 private:
