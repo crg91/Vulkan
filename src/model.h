@@ -127,6 +127,8 @@ public:
 	VkDeviceMemory getUniformBufferMemory() { return m_vkUniformBufferMemory; }
 	uint32_t getIndicesSize() { return static_cast<uint32_t>(m_indices.size()); }
 	void setModelPath(std::string modelPath) { m_modelPath = modelPath; }
+	void setGraphicsPipeline(VkPipeline pipeline) { m_vkGraphicsPipeline = pipeline; }
+	VkPipeline getGraphicsPipeline() { return m_vkGraphicsPipeline; }
 private:
 	DurationForRotation m_durations;
 	StdTime m_lastUpdateTime[3];
@@ -143,5 +145,6 @@ private:
 	std::string m_modelPath;
 	glm::vec3 m_position;
 	glm::vec3 m_center;
+	VkPipeline m_vkGraphicsPipeline;
 };
 

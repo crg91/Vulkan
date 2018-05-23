@@ -63,15 +63,17 @@ public:
 		m_vkSwapchain(VK_NULL_HANDLE),
 		m_vkRenderPass(VK_NULL_HANDLE),
 		m_vkPipelineLayout(VK_NULL_HANDLE),
-		m_vkGraphicsPipeline(VK_NULL_HANDLE),
+		m_vkGraphicsPipelineWithColorShading(VK_NULL_HANDLE),
+		m_vkGraphicsPipelineWithTextureShading(VK_NULL_HANDLE),
 		m_vkCommandPool(VK_NULL_HANDLE),
 		m_vkImageAvailableSemaphore(VK_NULL_HANDLE),
 		m_vkRenderFinishedSemaphore(VK_NULL_HANDLE)
 	{
-		m_models.resize(1);
+		m_models.resize(2);
 		m_models[0].setModelPath("models/cube.obj");
-		// m_models[0].setModelPath("models/chalet.obj");
-		m_vkDescriptorSets.resize(1);
+		m_models[0].translate(glm::vec3(2.0f, 0.0f, 0.0f));
+		m_models[1].setModelPath("models/chalet.obj");
+		m_vkDescriptorSets.resize(2);
 	}
 
 private:
@@ -101,7 +103,8 @@ private:
 	void createSwapChain();
 	void recreateSwapchain();
 	void createSwapchainImageViews();
-	void createGraphicsPipeline();
+	void createGraphicsPipelines();
+	VkPipeline createGraphicsPipeline(std::string fragShaderPath);
 	VkShaderModule createShaderModule(const std::vector<char> &code);
 	void createRenderPass();
 	void createFrameBuffers();
@@ -187,7 +190,8 @@ private:
 	std::vector<VkImageView> m_vkSwapchainImageViews;
 	VkRenderPass m_vkRenderPass;
 	VkPipelineLayout m_vkPipelineLayout;
-	VkPipeline m_vkGraphicsPipeline;
+	VkPipeline m_vkGraphicsPipelineWithColorShading;
+	VkPipeline m_vkGraphicsPipelineWithTextureShading;
 	std::vector<VkFramebuffer> m_vkSwapchainFrameBuffers;
 	VkCommandPool m_vkCommandPool;
 	std::vector<VkCommandBuffer> m_vkCommandBuffers;

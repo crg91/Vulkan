@@ -94,7 +94,7 @@ void HelloTriangleApplication::initVulkan()
 	createSwapchainImageViews();
 	createRenderPass();
 	createDescriptorSetLayout();
-	createGraphicsPipeline();
+	createGraphicsPipelines();
 	createCommandPool();
 	createDepthResources();
 	createFrameBuffers();
@@ -130,6 +130,24 @@ void HelloTriangleApplication::run()
 	mainLoop();
 	cleanup();
 }
+
+/**************************************************************
+* Description
+*		Creates graphics pipelines needed for the application.
+*
+* Returns
+*		void
+* Notes
+*
+**************************************************************/
+void HelloTriangleApplication::createGraphicsPipelines()
+{
+	m_vkGraphicsPipelineWithColorShading = createGraphicsPipeline("shaders/colorshading.spv");
+	m_models[0].setGraphicsPipeline(m_vkGraphicsPipelineWithColorShading);
+	m_vkGraphicsPipelineWithTextureShading = createGraphicsPipeline("shaders/textureshading.spv");
+	m_models[1].setGraphicsPipeline(m_vkGraphicsPipelineWithTextureShading);
+}
+
 
 /**************************************************************
 * Description
@@ -923,7 +941,8 @@ void HelloTriangleApplication::cleanupSwapchain()
 	}
 
 	vkFreeCommandBuffers(m_vkDevice, m_vkCommandPool, m_vkCommandBuffers.size(), m_vkCommandBuffers.data());
-	vkDestroyPipeline(m_vkDevice, m_vkGraphicsPipeline, nullptr);
+	vkDestroyPipeline(m_vkDevice, m_vkGraphicsPipelineWithColorShading, nullptr);
+	vkDestroyPipeline(m_vkDevice, m_vkGraphicsPipelineWithTextureShading, nullptr);
 
 	vkDestroyPipelineLayout(m_vkDevice, m_vkPipelineLayout, nullptr);
 	vkDestroyRenderPass(m_vkDevice, m_vkRenderPass, nullptr);
@@ -1865,7 +1884,7 @@ void HelloTriangleApplication::recreateSwapchain()
 	createSwapChain();
 	createSwapchainImageViews();
 	createRenderPass();
-	createGraphicsPipeline();
+	createGraphicsPipelines();
 	createDepthResources();
 	createFrameBuffers();
 	createAndFillCommandBuffers();
@@ -1907,17 +1926,16 @@ void HelloTriangleApplication::createSwapchainImageViews()
 *		7. Color/Alpha Blending
 *		8. Descriptor set layout for uniform object
 * Returns
-*		void
+*		Graphics pipeline
 * Notes
 *
 **************************************************************/
-void HelloTriangleApplication::createGraphicsPipeline()
+VkPipeline HelloTriangleApplication::createGraphicsPipeline(std::string fragShaderPath)
 {
 	auto vertShaderCode = readFile("shaders/vert.spv");
-	auto fragShaderCode = readFile("shaders/colorshading.spv");
-	// auto fragShaderCode = readFile("shaders/textureshading.spv");
+	auto colorShadingCode = readFile(fragShaderPath.c_str());
 	auto vertShaderModule = createShaderModule(vertShaderCode);
-	auto fragShaderModule = createShaderModule(fragShaderCode);
+	auto fragShaderModule = createShaderModule(colorShadingCode);
 	
 	VkPipelineShaderStageCreateInfo  vertShaderStageCreateInfo = {};
 	vertShaderStageCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -2059,13 +2077,16 @@ void HelloTriangleApplication::createGraphicsPipeline()
 	pipelineInfo.basePipelineIndex = -1;
 	pipelineInfo.pDepthStencilState = &depthStencil;
 
-	if (VK_SUCCESS != vkCreateGraphicsPipelines(m_vkDevice, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_vkGraphicsPipeline))
+	VkPipeline pipeline;
+	if (VK_SUCCESS != vkCreateGraphicsPipelines(m_vkDevice, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline))
 	{
 		throw std::runtime_error("Could not create graphics pipeline");
 	}
 
 	vkDestroyShaderModule(m_vkDevice, vertShaderModule, nullptr);
 	vkDestroyShaderModule(m_vkDevice, fragShaderModule, nullptr);
+
+	return pipeline;
 }
 
 /**************************************************************
@@ -2340,9 +2361,10 @@ void HelloTriangleApplication::createAndFillCommandBuffers()
 		renderPassInfo.pClearValues = clearValues.data();
 
 		vkCmdBeginRenderPass(m_vkCommandBuffers[i], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-		vkCmdBindPipeline(m_vkCommandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, m_vkGraphicsPipeline);
+
 		for (int j = 0; j < m_models.size(); ++j)
 		{
+			vkCmdBindPipeline(m_vkCommandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, m_models[j].getGraphicsPipeline());
 			VkBuffer vertexBuffers[] = { m_models[j].getVertexBuffer() };
 			VkDeviceSize offsets[] = { 0 };
 			vkCmdBindVertexBuffers(m_vkCommandBuffers[i], 0, 1, vertexBuffers, offsets);
