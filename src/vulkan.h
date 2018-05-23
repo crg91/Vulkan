@@ -70,7 +70,6 @@ public:
 	{
 		m_models.resize(1);
 		m_models[0].setModelPath("models/cube.obj");
-		m_models[0].setCenter(glm::vec3(-0.5f, -0.5f, -0.5f));
 		m_vkDescriptorSets.resize(1);
 	}
 
