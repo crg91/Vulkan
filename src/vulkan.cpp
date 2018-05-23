@@ -1914,7 +1914,8 @@ void HelloTriangleApplication::createSwapchainImageViews()
 void HelloTriangleApplication::createGraphicsPipeline()
 {
 	auto vertShaderCode = readFile("shaders/vert.spv");
-	auto fragShaderCode = readFile("shaders/frag.spv");
+	auto fragShaderCode = readFile("shaders/colorshading.spv");
+	// auto fragShaderCode = readFile("shaders/textureshading.spv");
 	auto vertShaderModule = createShaderModule(vertShaderCode);
 	auto fragShaderModule = createShaderModule(fragShaderCode);
 	

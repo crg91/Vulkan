@@ -70,6 +70,7 @@ public:
 	{
 		m_models.resize(1);
 		m_models[0].setModelPath("models/cube.obj");
+		// m_models[0].setModelPath("models/chalet.obj");
 		m_vkDescriptorSets.resize(1);
 	}
 
