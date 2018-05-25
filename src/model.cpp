@@ -23,7 +23,9 @@ m_vkVertexBufferMemory(VK_NULL_HANDLE)
 	m_fKeyPressed[0] = false;
 	m_fKeyPressed[1] = false;
 	m_fKeyPressed[2] = false;
-	m_position = glm::vec3(0);
+	m_position = glm::vec3(0.0f);
+	m_center = glm::vec3(0.0f);
+	m_scale = glm::vec3(1.0f);
 }
 
 /**************************************************************
@@ -126,9 +128,12 @@ glm::mat4 Model::getModelMatrix()
 
 	return
 		glm::translate(glm::mat4(1.0f), m_position) *
+		glm::translate(glm::mat4(1.0f), -m_center) *
 		glm::rotate(glm::mat4(1.0f), m_durations.m_xDuration * glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f))*
 		glm::rotate(glm::mat4(1.0f), m_durations.m_yDuration * glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f))*
-		glm::rotate(glm::mat4(1.0f), m_durations.m_zDuration * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+		glm::rotate(glm::mat4(1.0f), m_durations.m_zDuration * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f))*
+		glm::scale(glm::mat4(1.0f), m_scale)*
+		glm::translate(glm::mat4(1.0f), m_center);
 }
 
 /**************************************************************
@@ -266,7 +271,15 @@ void Model::loadModel()
 					1.0f - attrib.texcoords[2 * index.texcoord_index + 1] };
 			}
 
-			vertex.m_color = { 1.0f, 1.0f, 1.0f };
+			if (index.normal_index != -1)
+			{
+				vertex.m_normal = {
+					attrib.normals[3 * index.normal_index + 0],
+					attrib.normals[3 * index.normal_index + 1],
+					attrib.normals[3 * index.normal_index + 2] };
+			}
+
+			vertex.m_color = { 1.0f, 0.0f, 0.0f };
 			if (0 == uniqueVertices.count(vertex))
 			{
 				uniqueVertices[vertex] = static_cast<uint32_t>(m_vertices.size());
@@ -416,4 +429,18 @@ void Model::cleanup(VkDevice vkDevice)
 void Model::translate(glm::vec3 translationVector)
 {
 	m_position += translationVector;
+}
+
+/**************************************************************
+* Description
+*		Sets the center for the model. We will use the center to
+*		ensure that rotation happens around this axis.
+* Returns
+*		void
+* Notes
+*
+**************************************************************/
+void Model::setCenter(glm::vec3 centerVector)
+{
+	m_center = centerVector;
 }

@@ -30,6 +30,7 @@ struct DurationForRotation
 struct Vertex
 {
 	glm::vec3 m_position;
+	glm::vec3 m_normal;
 	glm::vec3 m_color;
 	glm::vec2 m_texCoord;
 
@@ -42,9 +43,9 @@ struct Vertex
 		return bindingDescription;
 	}
 
-	static std::array<VkVertexInputAttributeDescription, 3> getAttributeDescriptions()
+	static std::array<VkVertexInputAttributeDescription, 4> getAttributeDescriptions()
 	{
-		std::array<VkVertexInputAttributeDescription, 3> attributeDescriptions = {};
+		std::array<VkVertexInputAttributeDescription, 4> attributeDescriptions = {};
 		attributeDescriptions[0].binding = 0;
 		attributeDescriptions[0].location = 0;
 		attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
@@ -57,6 +58,12 @@ struct Vertex
 		attributeDescriptions[2].location = 2;
 		attributeDescriptions[2].format = VK_FORMAT_R32G32_SFLOAT;
 		attributeDescriptions[2].offset = offsetof(Vertex, m_texCoord);
+		attributeDescriptions[3].binding = 0;
+		attributeDescriptions[3].location = 3;
+		attributeDescriptions[3].format = VK_FORMAT_R32G32B32_SFLOAT;
+		attributeDescriptions[3].offset = offsetof(Vertex, m_normal);
+
+
 		return attributeDescriptions;
 	}
 
@@ -64,7 +71,8 @@ struct Vertex
 	{
 		return m_position == other.m_position &&
 			m_texCoord == other.m_texCoord &&
-			m_color == other.m_color;
+			m_color == other.m_color &&
+			m_normal == other.m_normal;
 	}
 };
 
@@ -81,9 +89,8 @@ namespace std
 	{
 		size_t operator()(Vertex const& vertex) const
 		{
-			return ((hash<glm::vec3>()(vertex.m_position) ^
-				(hash<glm::vec3>()(vertex.m_color) << 1)) >> 1) ^
-				(hash<glm::vec2>()(vertex.m_texCoord) << 1);
+			return (((hash<glm::vec3>()(vertex.m_position) ^ (hash<glm::vec3>()(vertex.m_color) << 1)) >> 1) ^
+					(hash<glm::vec2>()(vertex.m_texCoord) << 1) >> 1) ^ (hash<glm::vec3>()(vertex.m_normal) << 1);
 		}
 	};
 }
@@ -113,12 +120,16 @@ public:
 	void createUniformBuffer(VkDevice vkDevice, VkPhysicalDevice vkPhysicalDevice);
 	void cleanup(VkDevice vkDevice);
 	void translate(glm::vec3 translationVector);
+	void setCenter(glm::vec3 center);
 	VkBuffer getVertexBuffer() { return m_vkVertexBuffer; }
 	VkBuffer getIndexBuffer() { return m_vkIndexBuffer; }
 	VkBuffer getUniformBuffer() { return m_vkUniformBuffer; }
 	VkDeviceMemory getUniformBufferMemory() { return m_vkUniformBufferMemory; }
 	uint32_t getIndicesSize() { return static_cast<uint32_t>(m_indices.size()); }
 	void setModelPath(std::string modelPath) { m_modelPath = modelPath; }
+	void setGraphicsPipeline(VkPipeline pipeline) { m_vkGraphicsPipeline = pipeline; }
+	VkPipeline getGraphicsPipeline() { return m_vkGraphicsPipeline; }
+	void setScale(glm::vec3 scale) { m_scale = scale; }
 private:
 	DurationForRotation m_durations;
 	StdTime m_lastUpdateTime[3];
@@ -134,5 +145,8 @@ private:
 	VkDeviceMemory m_vkUniformBufferMemory;
 	std::string m_modelPath;
 	glm::vec3 m_position;
+	glm::vec3 m_center;
+	glm::vec3 m_scale;
+	VkPipeline m_vkGraphicsPipeline;
 };
 
