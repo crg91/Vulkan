@@ -129,6 +129,7 @@ public:
 	void setModelPath(std::string modelPath) { m_modelPath = modelPath; }
 	void setGraphicsPipeline(VkPipeline pipeline) { m_vkGraphicsPipeline = pipeline; }
 	VkPipeline getGraphicsPipeline() { return m_vkGraphicsPipeline; }
+	void setScale(glm::vec3 scale) { m_scale = scale; }
 private:
 	DurationForRotation m_durations;
 	StdTime m_lastUpdateTime[3];
@@ -145,6 +146,7 @@ private:
 	std::string m_modelPath;
 	glm::vec3 m_position;
 	glm::vec3 m_center;
+	glm::vec3 m_scale;
 	VkPipeline m_vkGraphicsPipeline;
 };
 

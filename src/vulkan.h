@@ -20,7 +20,7 @@
 const int WIDTH = 800;
 const int HEIGHT = 600;
 
-const std::string TEXTURE_PATH = "textures/chalet.jpg";
+const std::string TEXTURE_PATH = "textures/teapot.png";
 
 #ifdef NDEBUG
 const bool g_enableValidationLayers = false;
@@ -71,8 +71,10 @@ public:
 	{
 		m_models.resize(2);
 		m_models[0].setModelPath("models/cube.obj");
-		m_models[0].translate(glm::vec3(2.0f, 0.0f, 0.0f));
-		m_models[1].setModelPath("models/chalet.obj");
+		m_models[0].translate(glm::vec3(3.0f, 0.0f, 0.0f));
+		m_models[1].setModelPath("models/teapot.obj");
+		m_models[1].translate(glm::vec3(0.0f, -1.0f, 0.0f));
+		m_models[1].setScale(glm::vec3(0.03f));
 		m_vkDescriptorSets.resize(2);
 	}
 

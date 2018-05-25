@@ -25,6 +25,7 @@ m_vkVertexBufferMemory(VK_NULL_HANDLE)
 	m_fKeyPressed[2] = false;
 	m_position = glm::vec3(0.0f);
 	m_center = glm::vec3(0.0f);
+	m_scale = glm::vec3(1.0f);
 }
 
 /**************************************************************
@@ -131,6 +132,7 @@ glm::mat4 Model::getModelMatrix()
 		glm::rotate(glm::mat4(1.0f), m_durations.m_xDuration * glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f))*
 		glm::rotate(glm::mat4(1.0f), m_durations.m_yDuration * glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f))*
 		glm::rotate(glm::mat4(1.0f), m_durations.m_zDuration * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f))*
+		glm::scale(glm::mat4(1.0f), m_scale)*
 		glm::translate(glm::mat4(1.0f), m_center);
 }
 
